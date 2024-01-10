@@ -39,9 +39,11 @@ func (s *server) RegisterUser(ctx context.Context, request *auth.RegisterRequest
 }
 
 func (s *server) UnregisterUser(ctx context.Context, request *auth.UnregisterRequest) (*auth.UnregisterResponse, error) {
-	//TODO: Fix below to remove selected user by token.
-	err := s.storage.RemoveUser(model.UserIdentifier{1})
+	data, err := s.tokenManager.Verify(request.Token)
 	if err != nil {
+		return nil, err
+	}
+	if err = s.storage.RemoveUser(model.UserIdentifier{Uid: data.Uid}); err != nil {
 		return nil, err
 	}
 	return &auth.UnregisterResponse{Success: true}, nil
@@ -71,11 +73,9 @@ func (s *server) Login(ctx context.Context, request *auth.LoginRequest) (*auth.L
 }
 
 func (s *server) Logout(ctx context.Context, request *auth.LogoutRequest) (*auth.LogoutResponse, error) {
-	//TODO implement me
+
 	panic("implement me")
 }
 
 func (s *server) mustEmbedUnimplementedAuthServer() {
-	//TODO implement me
-	panic("implement me")
 }

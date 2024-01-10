@@ -20,16 +20,16 @@ type jwtClaims struct {
 	tokenManager.TokenData
 }
 
-type JwtManager struct {
+type manager[T jwt.SigningMethod] struct {
 	secretKey     string
 	publicKey     string
 	duration      time.Duration
-	signingMethod jwt.SigningMethod
+	signingMethod T
 }
 
-func (j *JwtManager) createClaims(user model.User) jwtClaims {
+func (m *manager[T]) createClaims(user model.User) jwtClaims {
 	claims := jwt.StandardClaims{
-		ExpiresAt: time.Now().Add(j.duration).Unix(),
+		ExpiresAt: time.Now().Add(m.duration).Unix(),
 		IssuedAt:  time.Now().Unix(),
 		Issuer:    "github.com/simp7/auth-server",
 	}
@@ -42,9 +42,9 @@ func (j *JwtManager) createClaims(user model.User) jwtClaims {
 	}
 }
 
-func (j *JwtManager) Generate(user model.User) (string, error) {
-	token := jwt.NewWithClaims(j.signingMethod, j.createClaims(user))
-	block, _ := pem.Decode([]byte(j.secretKey))
+func (m *manager[T]) Generate(user model.User) (string, error) {
+	token := jwt.NewWithClaims(m.signingMethod, m.createClaims(user))
+	block, _ := pem.Decode([]byte(m.secretKey))
 
 	key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 	if err != nil {
@@ -54,13 +54,13 @@ func (j *JwtManager) Generate(user model.User) (string, error) {
 	return token.SignedString(key)
 }
 
-func (j *JwtManager) Verify(accessToken string) (tokenManager.TokenData, error) {
+func (m *manager[T]) Verify(accessToken string) (tokenManager.TokenData, error) {
 	keyFunc := func(token *jwt.Token) (interface{}, error) {
-		_, ok := token.Method.(*jwt.SigningMethodECDSA)
+		_, ok := token.Method.(T)
 		if !ok {
 			return nil, fmt.Errorf("unexpected token signing method")
 		}
-		return []byte(j.publicKey), nil
+		return []byte(m.publicKey), nil
 	}
 	token, err := jwt.ParseWithClaims(accessToken, &jwtClaims{}, keyFunc)
 	if err != nil {
@@ -73,13 +73,13 @@ func (j *JwtManager) Verify(accessToken string) (tokenManager.TokenData, error) 
 	return claims.TokenData, nil
 }
 
-func NewWithECDSA() (*JwtManager, error) {
+func ECDSA(key *ecdsa.PrivateKey) (tokenManager.TokenManager, error) {
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to generate key")
 	}
 	secretKey, publicKey, err := pemKeyPair(key)
-	return &JwtManager{secretKey: string(secretKey), publicKey: string(publicKey), duration: time.Minute * 30, signingMethod: jwt.SigningMethodES256}, nil
+	return &manager[*jwt.SigningMethodECDSA]{secretKey: string(secretKey), publicKey: string(publicKey), duration: time.Minute * 30, signingMethod: jwt.SigningMethodES256}, nil
 }
 
 func pemKeyPair(key *ecdsa.PrivateKey) (privateKey []byte, publicKey []byte, err error) {
