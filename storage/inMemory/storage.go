@@ -10,6 +10,7 @@ import (
 type inMemory struct {
 	userById    map[model.UserIdentifier]model.User
 	userByEmail map[string]model.User
+	validToken  map[string]struct{}
 }
 
 func (i *inMemory) FindUser(email string) (model.User, bool) {
@@ -43,6 +44,36 @@ func (i *inMemory) RemoveUser(id model.UserIdentifier) error {
 	return nil
 }
 
-func NewInMemoryStorage() storage.Storage {
-	return &inMemory{}
+func (i *inMemory) RegisterToken(token string) error {
+	if _, ok := i.validToken[token]; ok {
+		return status.Errorf(codes.AlreadyExists, "token already exist: %v", token)
+	}
+
+	i.validToken[token] = struct{}{}
+	return nil
+}
+
+func (i *inMemory) CheckToken(token string) error {
+	_, ok := i.validToken[token]
+	if !ok {
+		return status.Errorf(codes.Unauthenticated, "token is not valid: %v", token)
+	}
+	return nil
+}
+
+func (i *inMemory) UnregisterToken(token string) error {
+	if _, ok := i.validToken[token]; !ok {
+		return status.Errorf(codes.NotFound, "token not exist: %v", token)
+	}
+	delete(i.validToken, token)
+	return nil
+}
+
+func Storage() storage.Storage {
+	s := new(inMemory)
+	s.validToken = make(map[string]struct{})
+	s.userById = make(map[model.UserIdentifier]model.User)
+	s.userByEmail = make(map[string]model.User)
+
+	return s
 }

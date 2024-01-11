@@ -2,6 +2,7 @@ package main
 
 import (
 	"auth-server/service"
+	"auth-server/storage/inMemory"
 	"auth-server/tokenManager/jwtManager"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -14,25 +15,24 @@ import (
 )
 
 const (
-	port      = ":50051"
-	secretKey = "secret"
+	port = ":50051"
 )
 
 func main() {
-
 	opts := []grpc.ServerOption{}
+
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		log.Fatalf("error when generating random key: %v", err)
 	}
-
 	m, err := jwtManager.ECDSA(key)
 	if err != nil {
 		log.Fatalf("error when starting manager")
 	}
 
 	s := grpc.NewServer(opts...)
-	serv := service.NewServer(nil, m)
+	storage := inMemory.Storage()
+	serv := service.NewServer(storage, storage, m)
 
 	auth.RegisterAuthServer(s, serv)
 	reflection.Register(s)

@@ -5,10 +5,12 @@ go 1.21.5
 require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/simp7/idl/gen/go v0.0.0-20240108045145-ec1bde326fb8
+	golang.org/x/crypto v0.16.0
 	google.golang.org/grpc v1.60.1
 )
 
 require (
+	github.com/golang-jwt/jwt/v5 v5.2.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/sys v0.16.0 // indirect

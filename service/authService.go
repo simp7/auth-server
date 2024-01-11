@@ -12,13 +12,15 @@ import (
 
 type server struct {
 	auth.UnimplementedAuthServer
-	storage      storage.Storage
+	userStorage  storage.User
+	tokenStorage storage.Token
 	tokenManager tokenManager.TokenManager
 }
 
-func NewServer(storage storage.Storage, tokenManager tokenManager.TokenManager) auth.AuthServer {
+func NewServer(userStorage storage.User, tokenStorage storage.Token, tokenManager tokenManager.TokenManager) auth.AuthServer {
 	s := new(server)
-	s.storage = storage
+	s.userStorage = userStorage
+	s.tokenStorage = tokenStorage
 	s.tokenManager = tokenManager
 	return s
 }
@@ -31,11 +33,20 @@ func (s *server) RegisterUser(ctx context.Context, request *auth.RegisterRequest
 		Role:     []string{"user"},
 	}
 
-	err := s.storage.SetUser(u)
+	if err := s.userStorage.SetUser(u); err != nil {
+		return nil, err
+	}
+
+	token, err := s.tokenManager.Generate(u)
 	if err != nil {
 		return nil, err
 	}
-	return &auth.RegisterResponse{Token: ""}, nil
+
+	if err = s.tokenStorage.RegisterToken(token); err != nil {
+		return nil, err
+	}
+
+	return &auth.RegisterResponse{Token: token}, nil
 }
 
 func (s *server) UnregisterUser(ctx context.Context, request *auth.UnregisterRequest) (*auth.UnregisterResponse, error) {
@@ -43,7 +54,7 @@ func (s *server) UnregisterUser(ctx context.Context, request *auth.UnregisterReq
 	if err != nil {
 		return nil, err
 	}
-	if err = s.storage.RemoveUser(model.UserIdentifier{Uid: data.Uid}); err != nil {
+	if err = s.userStorage.RemoveUser(model.UserIdentifier{Uid: data.Uid}); err != nil {
 		return nil, err
 	}
 	return &auth.UnregisterResponse{Success: true}, nil
@@ -52,7 +63,7 @@ func (s *server) UnregisterUser(ctx context.Context, request *auth.UnregisterReq
 func (s *server) Login(ctx context.Context, request *auth.LoginRequest) (*auth.LoginResponse, error) {
 	switch data := request.Method.(type) {
 	case *auth.LoginRequest_Traditional:
-		u, ok := s.storage.FindUser(data.Traditional.Email)
+		u, ok := s.userStorage.FindUser(data.Traditional.Email)
 		if !ok {
 			return nil, status.Errorf(codes.NotFound, "user not found: %v", data.Traditional.Email)
 		}
@@ -65,6 +76,12 @@ func (s *server) Login(ctx context.Context, request *auth.LoginRequest) (*auth.L
 		if err != nil {
 			return nil, err
 		}
+
+		err = s.tokenStorage.RegisterToken(token)
+		if err != nil {
+			return nil, err
+		}
+
 		return &auth.LoginResponse{Token: token}, nil
 	case *auth.LoginRequest_Oauth:
 		return nil, status.Error(codes.Unimplemented, "oauth is not implemented yet")
@@ -73,8 +90,11 @@ func (s *server) Login(ctx context.Context, request *auth.LoginRequest) (*auth.L
 }
 
 func (s *server) Logout(ctx context.Context, request *auth.LogoutRequest) (*auth.LogoutResponse, error) {
-
-	panic("implement me")
+	err := s.tokenStorage.UnregisterToken(request.Token)
+	if err != nil {
+		return nil, err
+	}
+	return &auth.LogoutResponse{Token: request.Token}, nil
 }
 
 func (s *server) mustEmbedUnimplementedAuthServer() {
