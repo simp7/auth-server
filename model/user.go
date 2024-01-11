@@ -1,6 +1,8 @@
 package model
 
-import "golang.org/x/crypto/bcrypt"
+import (
+	"golang.org/x/crypto/bcrypt"
+)
 
 type UserIdentifier struct {
 	Uid uint64

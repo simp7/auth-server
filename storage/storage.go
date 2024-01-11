@@ -12,6 +12,7 @@ type User interface {
 type Token interface {
 	RegisterToken(token string) error
 	UnregisterToken(token string) error
+	CheckToken(token string) error
 }
 
 type Storage interface {

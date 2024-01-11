@@ -6,6 +6,7 @@ import (
 	"auth-server/tokenManager"
 	"context"
 	"github.com/simp7/idl/gen/go/auth"
+	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -26,14 +27,18 @@ func NewServer(userStorage storage.User, tokenStorage storage.Token, tokenManage
 }
 
 func (s *server) RegisterUser(ctx context.Context, request *auth.RegisterRequest) (*auth.RegisterResponse, error) {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "error when generate hashed password")
+	}
 	u := model.User{
 		Email:    request.Email,
-		Password: request.Password,
+		Password: string(hashedPassword),
 		Nickname: request.Nickname,
 		Role:     []string{"user"},
 	}
 
-	if err := s.userStorage.SetUser(u); err != nil {
+	if err = s.userStorage.SetUser(u); err != nil {
 		return nil, err
 	}
 
