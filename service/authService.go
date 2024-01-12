@@ -55,11 +55,7 @@ func (s *server) RegisterUser(ctx context.Context, request *auth.RegisterRequest
 }
 
 func (s *server) UnregisterUser(ctx context.Context, request *auth.UnregisterRequest) (*auth.UnregisterResponse, error) {
-	data, err := s.tokenManager.Verify(request.Token)
-	if err != nil {
-		return nil, err
-	}
-	if err = s.userStorage.RemoveUser(model.UserIdentifier{Uid: data.Uid}); err != nil {
+	if err := s.userStorage.RemoveUser(model.UserIdentifier{Uid: request.Uid}); err != nil {
 		return nil, err
 	}
 	return &auth.UnregisterResponse{Success: true}, nil

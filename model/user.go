@@ -14,7 +14,6 @@ type User struct {
 	Password string
 	Nickname string
 	Role     []string
-	uid      int
 }
 
 func (u User) VerifyPassword(password string) error {

@@ -37,10 +37,12 @@ func (i *inMemory) SetUser(user model.User) error {
 }
 
 func (i *inMemory) RemoveUser(id model.UserIdentifier) error {
-	if _, err := i.GetUser(id); err != nil {
+	u, err := i.GetUser(id)
+	if err != nil {
 		return err
 	}
 	delete(i.userById, id)
+	delete(i.userByEmail, u.Email)
 	return nil
 }
 
