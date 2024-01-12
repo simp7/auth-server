@@ -16,6 +16,7 @@ type server struct {
 	userStorage  storage.User
 	tokenStorage storage.Token
 	tokenManager tokenManager.TokenManager
+	index        uint64
 }
 
 func NewServer(userStorage storage.User, tokenStorage storage.Token, tokenManager tokenManager.TokenManager) auth.AuthServer {
@@ -23,7 +24,14 @@ func NewServer(userStorage storage.User, tokenStorage storage.Token, tokenManage
 	s.userStorage = userStorage
 	s.tokenStorage = tokenStorage
 	s.tokenManager = tokenManager
+	s.index = 1
 	return s
+}
+
+func (s *server) getIndex() uint64 {
+	result := s.index
+	s.index = s.index + 1
+	return result
 }
 
 func (s *server) RegisterUser(ctx context.Context, request *auth.RegisterRequest) (*auth.RegisterResponse, error) {
@@ -32,6 +40,9 @@ func (s *server) RegisterUser(ctx context.Context, request *auth.RegisterRequest
 		return nil, status.Error(codes.Internal, "error when generate hashed password")
 	}
 	u := model.User{
+		UserIdentifier: model.UserIdentifier{
+			Uid: s.getIndex(),
+		},
 		Email:    request.Email,
 		Password: string(hashedPassword),
 		Nickname: request.Nickname,
