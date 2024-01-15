@@ -16,11 +16,12 @@ type DBInfo struct {
 }
 
 func (i *DBInfo) connString() string {
-	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", info.Host, info.Port, info.User, info.Password, info.Database)
+	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", i.Host, i.Port, i.User, i.Password, i.Database)
 }
 
 type postgres struct {
-	db *sql.DB
+	db     *sql.DB
+	signal chan struct{}
 }
 
 func (p *postgres) FindUser(email string) (model.User, bool) {
@@ -58,6 +59,10 @@ func (p *postgres) CheckToken(token string) error {
 	panic("implement me")
 }
 
+func (p *postgres) Close() error {
+	return p.db.Close()
+}
+
 func Storage(info DBInfo) (storage.Storage, error) {
 	s := new(postgres)
 
@@ -66,5 +71,6 @@ func Storage(info DBInfo) (storage.Storage, error) {
 		return nil, err
 	}
 	s.db = db
+
 	return s, nil
 }

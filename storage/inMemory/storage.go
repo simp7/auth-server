@@ -71,6 +71,13 @@ func (i *inMemory) UnregisterToken(token string) error {
 	return nil
 }
 
+func (i *inMemory) Close() error {
+	i.validToken = nil
+	i.userById = nil
+	i.userByEmail = nil
+	return nil
+}
+
 func Storage() storage.Storage {
 	s := new(inMemory)
 	s.validToken = make(map[string]struct{})

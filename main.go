@@ -32,6 +32,11 @@ func main() {
 
 	s := grpc.NewServer(opts...)
 	storage := inMemory.Storage()
+	defer func() {
+		if err = storage.Close(); err != nil {
+			log.Fatalf("error when closing storage: %v", err)
+		}
+	}()
 	serv := service.NewServer(storage, storage, m)
 
 	auth.RegisterAuthServer(s, serv)
@@ -41,6 +46,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to listen: %v\n", err)
 	}
+
 	if err = s.Serve(listen); err != nil {
 		log.Fatalf("failed to serve: %v\n", err)
 	}
