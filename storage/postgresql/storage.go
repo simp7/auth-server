@@ -25,18 +25,49 @@ type postgres struct {
 }
 
 func (p *postgres) FindUser(email string) (model.User, bool) {
-	//TODO implement me
-	panic("implement me")
+	u := model.User{}
+	query := "SELECT * FROM users WHERE email=$1"
+	rows, err := p.db.Query(query, email)
+	if rows.Err() != nil {
+		fmt.Printf("FindUser query error: %v\n", rows.Err)
+		return model.User{}, false
+	}
+	for rows.Next() {
+		err = rows.Scan(&u)
+		if err != nil {
+			return model.User{}, false
+		}
+	}
+	return u, true
 }
 
 func (p *postgres) GetUser(id model.UserIdentifier) (model.User, error) {
-	//TODO implement me
-	panic("implement me")
+	u := model.User{}
+	query := "SELECT * FROM users WHERE uid=$1;"
+	rows, err := p.db.Query(query, id.Uid)
+	if err != nil {
+		fmt.Printf("GetUser query error: %v\n", err)
+		return model.User{}, err
+	}
+	rows.Next()
+	err = rows.Scan(&u)
+	if err != nil {
+		return model.User{}, err
+	}
+	return u, nil
 }
 
 func (p *postgres) SetUser(user model.User) error {
-	//TODO implement me
-	panic("implement me")
+	query := "INSERT INTO users (email, password, nickname) VALUES ($1, $2, $3); "
+	result, err := p.db.Exec(query, user.Email, user.Password, user.Nickname)
+	if err != nil {
+		fmt.Printf("SetUser query error: %v\n", err)
+		return err
+	}
+	if _, err = result.RowsAffected(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (p *postgres) RemoveUser(id model.UserIdentifier) error {
@@ -66,7 +97,7 @@ func (p *postgres) Close() error {
 func Storage(info DBInfo) (storage.Storage, error) {
 	s := new(postgres)
 
-	db, err := sql.Open("*postgres", info.connString())
+	db, err := sql.Open("postgres", info.connString())
 	if err != nil {
 		return nil, err
 	}

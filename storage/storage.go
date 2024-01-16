@@ -1,6 +1,10 @@
 package storage
 
-import "auth-server/model"
+import (
+	"auth-server/model"
+
+	_ "github.com/lib/pq"
+)
 
 type User interface {
 	FindUser(email string) (model.User, bool)
