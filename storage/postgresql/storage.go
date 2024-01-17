@@ -5,6 +5,8 @@ import (
 	"auth-server/storage"
 	"database/sql"
 	"fmt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type DBInfo struct {
@@ -25,20 +27,15 @@ type postgres struct {
 }
 
 func (p *postgres) FindUser(email string) (model.User, bool) {
-	u := model.User{}
-	query := "SELECT * FROM users WHERE email=$1"
-	rows, err := p.db.Query(query, email)
-	if rows.Err() != nil {
-		fmt.Printf("FindUser query error: %v\n", rows.Err)
+	u := &model.User{}
+	query := "SELECT * FROM users WHERE email=$1;"
+	row := p.db.QueryRow(query, email)
+	if err := row.Scan(&u.Uid, &u.Email, &u.Password, &u.Nickname); err != nil {
+		fmt.Printf("FindUser query error: %v\n", err)
 		return model.User{}, false
 	}
-	for rows.Next() {
-		err = rows.Scan(&u)
-		if err != nil {
-			return model.User{}, false
-		}
-	}
-	return u, true
+
+	return *u, true
 }
 
 func (p *postgres) GetUser(id model.UserIdentifier) (model.User, error) {
@@ -59,42 +56,32 @@ func (p *postgres) GetUser(id model.UserIdentifier) (model.User, error) {
 
 func (p *postgres) SetUser(user model.User) error {
 	query := "INSERT INTO users (email, password, nickname) VALUES ($1, $2, $3); "
-	result, err := p.db.Exec(query, user.Email, user.Password, user.Nickname)
+	_, err := p.db.Exec(query, user.Email, user.Password, user.Nickname)
 	if err != nil {
 		fmt.Printf("SetUser query error: %v\n", err)
-		return err
-	}
-	if _, err = result.RowsAffected(); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (p *postgres) RemoveUser(id model.UserIdentifier) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (p *postgres) RegisterToken(token string) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (p *postgres) UnregisterToken(token string) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (p *postgres) CheckToken(token string) error {
-	//TODO implement me
-	panic("implement me")
+	query := "DELETE FROM users WHERE uid = $1;"
+	result, err := p.db.Exec(query, id.Uid)
+	if err != nil {
+		fmt.Printf("RemoveUser query error: %v\n", err)
+		return err
+	}
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		return status.Error(codes.NotFound, "user not found for deletion")
+	}
+	return nil
 }
 
 func (p *postgres) Close() error {
 	return p.db.Close()
 }
 
-func Storage(info DBInfo) (storage.Storage, error) {
+func Storage(info DBInfo) (storage.User, error) {
 	s := new(postgres)
 
 	db, err := sql.Open("postgres", info.connString())

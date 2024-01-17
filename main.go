@@ -13,8 +13,6 @@ import (
 	"google.golang.org/grpc/reflection"
 	"log"
 	"net"
-
-	_ "github.com/lib/pq"
 )
 
 const (

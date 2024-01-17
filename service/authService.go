@@ -8,6 +8,7 @@ import (
 	"github.com/simp7/idl/gen/go/auth"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -91,7 +92,15 @@ func (s *server) Login(ctx context.Context, request *auth.LoginRequest) (*auth.L
 }
 
 func (s *server) Logout(ctx context.Context, request *auth.LogoutRequest) (*auth.LogoutResponse, error) {
-	err := s.tokenStorage.UnregisterToken(request.Token)
+	token := request.Token
+	meta, err := s.getTokenFromMetadata(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if token != meta {
+		return nil, status.Error(codes.PermissionDenied, "argument and current user are not matching")
+	}
+	err = s.tokenStorage.UnregisterToken(request.Token)
 	if err != nil {
 		return nil, err
 	}
@@ -99,4 +108,16 @@ func (s *server) Logout(ctx context.Context, request *auth.LogoutRequest) (*auth
 }
 
 func (s *server) mustEmbedUnimplementedAuthServer() {
+}
+
+func (s *server) getTokenFromMetadata(ctx context.Context) (string, error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return "", status.Error(codes.Unauthenticated, "token is not provided")
+	}
+	t, ok := md["authorization"]
+	if !ok {
+		return "", status.Error(codes.Unauthenticated, "token is not provided")
+	}
+	return t[0], nil
 }
