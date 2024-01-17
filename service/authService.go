@@ -56,7 +56,20 @@ func (s *server) RegisterUser(ctx context.Context, request *auth.RegisterRequest
 }
 
 func (s *server) UnregisterUser(ctx context.Context, request *auth.UnregisterRequest) (*auth.UnregisterResponse, error) {
-	if err := s.userStorage.RemoveUser(model.UserIdentifier{Uid: request.Uid}); err != nil {
+	token, err := s.getTokenFromMetadata(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	extracted, err := s.tokenManager.Verify(token)
+	if err != nil {
+		return nil, err
+	}
+	if extracted.Uid != request.Uid {
+		return nil, status.Error(codes.PermissionDenied, "cannot permit unregistering by other")
+	}
+
+	if err = s.userStorage.RemoveUser(model.UserIdentifier{Uid: request.Uid}); err != nil {
 		return nil, err
 	}
 	return &auth.UnregisterResponse{Success: true}, nil
