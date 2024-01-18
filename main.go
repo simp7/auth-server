@@ -3,6 +3,7 @@ package main
 import (
 	"auth-server/service"
 	"auth-server/storage/inMemory"
+	"auth-server/storage/postgresql"
 	"auth-server/tokenManager/jwtManager"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -31,8 +32,23 @@ func main() {
 	}
 
 	s := grpc.NewServer(opts...)
-	storage := inMemory.Storage()
-	serv := service.NewServer(storage, storage, m)
+	userStorage, err := postgresql.Storage(postgresql.DBInfo{
+		Host:     "localhost",
+		Port:     5432,
+		User:     "gopher",
+		Password: "pass1234",
+		Database: "auth",
+	})
+	tokenStorage := inMemory.Storage()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		if err = userStorage.Close(); err != nil {
+			log.Fatalf("error when closing userStorage: %v", err)
+		}
+	}()
+	serv := service.NewServer(userStorage, tokenStorage, m)
 
 	auth.RegisterAuthServer(s, serv)
 	reflection.Register(s)
@@ -41,6 +57,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to listen: %v\n", err)
 	}
+
 	if err = s.Serve(listen); err != nil {
 		log.Fatalf("failed to serve: %v\n", err)
 	}

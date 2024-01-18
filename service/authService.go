@@ -8,6 +8,7 @@ import (
 	"github.com/simp7/idl/gen/go/auth"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -66,7 +67,20 @@ func (s *server) RegisterUser(ctx context.Context, request *auth.RegisterRequest
 }
 
 func (s *server) UnregisterUser(ctx context.Context, request *auth.UnregisterRequest) (*auth.UnregisterResponse, error) {
-	if err := s.userStorage.RemoveUser(model.UserIdentifier{Uid: request.Uid}); err != nil {
+	token, err := s.getTokenFromMetadata(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	extracted, err := s.tokenManager.Verify(token)
+	if err != nil {
+		return nil, err
+	}
+	if extracted.Uid != request.Uid {
+		return nil, status.Error(codes.PermissionDenied, "cannot permit unregistering by other")
+	}
+
+	if err = s.userStorage.RemoveUser(model.UserIdentifier{Uid: request.Uid}); err != nil {
 		return nil, err
 	}
 	return &auth.UnregisterResponse{Success: true}, nil
@@ -102,7 +116,15 @@ func (s *server) Login(ctx context.Context, request *auth.LoginRequest) (*auth.L
 }
 
 func (s *server) Logout(ctx context.Context, request *auth.LogoutRequest) (*auth.LogoutResponse, error) {
-	err := s.tokenStorage.UnregisterToken(request.Token)
+	token := request.Token
+	meta, err := s.getTokenFromMetadata(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if token != meta {
+		return nil, status.Error(codes.PermissionDenied, "argument and current user are not matching")
+	}
+	err = s.tokenStorage.UnregisterToken(request.Token)
 	if err != nil {
 		return nil, err
 	}
@@ -110,4 +132,16 @@ func (s *server) Logout(ctx context.Context, request *auth.LogoutRequest) (*auth
 }
 
 func (s *server) mustEmbedUnimplementedAuthServer() {
+}
+
+func (s *server) getTokenFromMetadata(ctx context.Context) (string, error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return "", status.Error(codes.Unauthenticated, "token is not provided")
+	}
+	t, ok := md["authorization"]
+	if !ok {
+		return "", status.Error(codes.Unauthenticated, "token is not provided")
+	}
+	return t[0], nil
 }
