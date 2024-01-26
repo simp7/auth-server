@@ -11,6 +11,11 @@ import (
 	"time"
 )
 
+const (
+	AccessTokenDuration  = time.Hour
+	RefreshTokenDuration = 60 * 24 * time.Hour
+)
+
 type jwtClaims struct {
 	jwt.Claims
 	tokenManager.TokenData
@@ -19,13 +24,12 @@ type jwtClaims struct {
 type manager[T jwt.SigningMethod] struct {
 	secretKey     string
 	publicKey     string
-	duration      time.Duration
 	signingMethod T
 }
 
-func (m *manager[T]) createClaims(user model.User) jwtClaims {
+func (m *manager[T]) createClaims(user model.User, duration time.Duration) jwtClaims {
 	claims := jwt.RegisteredClaims{
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(m.duration)),
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(duration)),
 		IssuedAt:  jwt.NewNumericDate(time.Now()),
 		Issuer:    "github.com/simp7/auth-server",
 	}
@@ -38,14 +42,31 @@ func (m *manager[T]) createClaims(user model.User) jwtClaims {
 	}
 }
 
-func (m *manager[T]) Generate(user model.User) (string, error) {
-	token := jwt.NewWithClaims(m.signingMethod, m.createClaims(user))
+func (m *manager[T]) tokenize(user model.User, duration time.Duration) (string, error) {
+	refreshToken := jwt.NewWithClaims(m.signingMethod, m.createClaims(user, duration))
 	block, _ := pem.Decode([]byte(m.secretKey))
 	key, err := x509.ParseECPrivateKey(block.Bytes)
 	if err != nil {
 		return "", fmt.Errorf("error parsing private key: %v", err.Error())
 	}
-	return token.SignedString(key)
+	return refreshToken.SignedString(key)
+}
+
+func (m *manager[T]) Generate(user model.User) (tokenManager.Tokens, error) {
+	accessToken, err := m.tokenize(user, AccessTokenDuration)
+	if err != nil {
+		return tokenManager.Tokens{}, fmt.Errorf("error parsing private key: %v", err.Error())
+	}
+
+	refreshToken, err := m.tokenize(user, RefreshTokenDuration)
+	if err != nil {
+		return tokenManager.Tokens{}, fmt.Errorf("error parsing private key: %v", err.Error())
+	}
+
+	return tokenManager.Tokens{
+		Access:  accessToken,
+		Refresh: refreshToken,
+	}, nil
 }
 
 func (m *manager[T]) Verify(accessToken string) (tokenManager.TokenData, error) {
@@ -74,7 +95,7 @@ func ECDSA(key *ecdsa.PrivateKey) (tokenManager.TokenManager, error) {
 		return nil, fmt.Errorf("failed to generate key pair: %v", err)
 	}
 
-	return &manager[*jwt.SigningMethodECDSA]{secretKey: string(secretKey), publicKey: string(publicKey), duration: time.Minute * 30, signingMethod: jwt.SigningMethodES256}, nil
+	return &manager[*jwt.SigningMethodECDSA]{secretKey: string(secretKey), publicKey: string(publicKey), signingMethod: jwt.SigningMethodES256}, nil
 }
 
 func ecdsaKeyPair(key *ecdsa.PrivateKey) (privateKey []byte, publicKey []byte, err error) {

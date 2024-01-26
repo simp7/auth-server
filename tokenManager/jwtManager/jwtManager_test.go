@@ -7,6 +7,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestECDSA(t *testing.T) {
@@ -73,7 +74,7 @@ func Test_manager_Generate(t *testing.T) {
 		name    string
 		m       manager[T]
 		args    args
-		want    string
+		want    tokenManager.Tokens
 		wantErr bool
 	}
 	tests := []testCase[*jwt.SigningMethodECDSA]{
@@ -136,7 +137,7 @@ func Test_manager_createClaims(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.m.createClaims(tt.args.user); !reflect.DeepEqual(got, tt.want) {
+			if got := tt.m.createClaims(tt.args.user, time.Second); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("createClaims() = %v, want %v", got, tt.want)
 			}
 		})

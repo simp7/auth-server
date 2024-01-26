@@ -9,7 +9,12 @@ type TokenData struct {
 	Role []string `json:"role"`
 }
 
+type Tokens struct {
+	Access  string
+	Refresh string
+}
+
 type TokenManager interface {
-	Generate(model.User) (string, error)
+	Generate(model.User) (Tokens, error)
 	Verify(accessToken string) (TokenData, error)
 }

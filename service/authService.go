@@ -59,11 +59,11 @@ func (s *server) RegisterUser(ctx context.Context, request *auth.RegisterRequest
 		return nil, err
 	}
 
-	if err = s.tokenStorage.RegisterToken(token); err != nil {
+	if err = s.tokenStorage.RegisterToken(token.Access); err != nil {
 		return nil, err
 	}
 
-	return &auth.RegisterResponse{Token: token}, nil
+	return &auth.RegisterResponse{Token: token.Access}, nil
 }
 
 func (s *server) UnregisterUser(ctx context.Context, request *auth.UnregisterRequest) (*auth.UnregisterResponse, error) {
@@ -103,12 +103,12 @@ func (s *server) Login(ctx context.Context, request *auth.LoginRequest) (*auth.L
 			return nil, err
 		}
 
-		err = s.tokenStorage.RegisterToken(token)
+		err = s.tokenStorage.RegisterToken(token.Access)
 		if err != nil {
 			return nil, err
 		}
 
-		return &auth.LoginResponse{Token: token}, nil
+		return &auth.LoginResponse{Token: token.Access}, nil
 	case *auth.LoginRequest_Oauth:
 		return nil, status.Error(codes.Unimplemented, "oauth is not implemented yet")
 	}
