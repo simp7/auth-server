@@ -8,9 +8,9 @@ import (
 )
 
 type inMemory struct {
-	userById    map[model.UserIdentifier]model.User
-	userByEmail map[string]model.User
-	validToken  map[string]struct{}
+	userById        map[model.UserIdentifier]model.User
+	userByEmail     map[string]model.User
+	accessToRefresh map[string]string
 }
 
 func (i *inMemory) FindUser(email string) (model.User, bool) {
@@ -46,33 +46,29 @@ func (i *inMemory) RemoveUser(id model.UserIdentifier) error {
 	return nil
 }
 
-func (i *inMemory) RegisterToken(token string) error {
-	if _, ok := i.validToken[token]; ok {
-		return status.Errorf(codes.AlreadyExists, "token already exist: %v", token)
-	}
-
-	i.validToken[token] = struct{}{}
+func (i *inMemory) RegisterTokenPair(accessToken string, refreshToken string) error {
+	i.accessToRefresh[accessToken] = refreshToken
 	return nil
 }
 
-func (i *inMemory) CheckToken(token string) error {
-	_, ok := i.validToken[token]
+func (i *inMemory) GetRefreshToken(accessToken string) (string, error) {
+	refreshToken, ok := i.accessToRefresh[accessToken]
 	if !ok {
-		return status.Errorf(codes.Unauthenticated, "token is not valid: %v", token)
+		return "", status.Errorf(codes.Unauthenticated, "token is not valid: %v", accessToken)
 	}
-	return nil
+	return refreshToken, nil
 }
 
-func (i *inMemory) UnregisterToken(token string) error {
-	if _, ok := i.validToken[token]; !ok {
+func (i *inMemory) DisableToken(token string) error {
+	if _, ok := i.accessToRefresh[token]; !ok {
 		return status.Errorf(codes.NotFound, "token not exist: %v", token)
 	}
-	delete(i.validToken, token)
+	delete(i.accessToRefresh, token)
 	return nil
 }
 
 func (i *inMemory) Close() error {
-	i.validToken = nil
+	i.accessToRefresh = nil
 	i.userById = nil
 	i.userByEmail = nil
 	return nil
@@ -80,7 +76,7 @@ func (i *inMemory) Close() error {
 
 func Storage() storage.Storage {
 	s := new(inMemory)
-	s.validToken = make(map[string]struct{})
+	s.accessToRefresh = make(map[string]string)
 	s.userById = make(map[model.UserIdentifier]model.User)
 	s.userByEmail = make(map[string]model.User)
 

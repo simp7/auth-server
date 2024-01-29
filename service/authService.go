@@ -59,7 +59,7 @@ func (s *server) RegisterUser(ctx context.Context, request *auth.RegisterRequest
 		return nil, err
 	}
 
-	if err = s.tokenStorage.RegisterToken(token.Access); err != nil {
+	if err = s.tokenStorage.RegisterTokenPair(token.Access, token.Refresh); err != nil {
 		return nil, err
 	}
 
@@ -86,6 +86,7 @@ func (s *server) UnregisterUser(ctx context.Context, request *auth.UnregisterReq
 	return &auth.UnregisterResponse{Success: true}, nil
 }
 
+// TODO: Rotate refresh key when re-publish accessKey
 func (s *server) Login(ctx context.Context, request *auth.LoginRequest) (*auth.LoginResponse, error) {
 	switch data := request.Method.(type) {
 	case *auth.LoginRequest_Traditional:
@@ -103,7 +104,7 @@ func (s *server) Login(ctx context.Context, request *auth.LoginRequest) (*auth.L
 			return nil, err
 		}
 
-		err = s.tokenStorage.RegisterToken(token.Access)
+		err = s.tokenStorage.RegisterTokenPair(token.Access, token.Refresh)
 		if err != nil {
 			return nil, err
 		}
@@ -124,8 +125,11 @@ func (s *server) Logout(ctx context.Context, request *auth.LogoutRequest) (*auth
 	if token != meta {
 		return nil, status.Error(codes.PermissionDenied, "argument and current user are not matching")
 	}
-	err = s.tokenStorage.UnregisterToken(request.Token)
+	refreshToken, err := s.tokenStorage.GetRefreshToken(request.Token)
 	if err != nil {
+		return nil, err
+	}
+	if err = s.tokenStorage.DisableToken(refreshToken); err != nil {
 		return nil, err
 	}
 	return &auth.LogoutResponse{Token: request.Token}, nil

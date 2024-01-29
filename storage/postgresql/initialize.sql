@@ -6,7 +6,7 @@ CREATE TABLE users (
 );
 
 CREATE TABLE user_role (
-    uid bigserial not null references users(uid) on delete cascade ,
+    uid bigserial not null references users(uid) on delete cascade,
     role varchar(20) not null,
     primary key (uid, role)
 );
