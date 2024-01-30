@@ -15,8 +15,9 @@ type User interface {
 }
 
 type Token interface {
-	RegisterTokenPair(accessToken string, refreshToken string) error
+	RegisterTokenPair(accessToken string, refreshToken string, uid uint64) error
 	DisableToken(refreshToken string) error
+	DisableTokenByUid(uid uint64) error
 	GetRefreshToken(accessToken string) (string, error)
 	Close() error
 }

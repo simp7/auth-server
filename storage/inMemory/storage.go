@@ -11,6 +11,7 @@ type inMemory struct {
 	userById        map[model.UserIdentifier]model.User
 	userByEmail     map[string]model.User
 	accessToRefresh map[string]string
+	uidToRefresh    map[uint64]string
 }
 
 func (i *inMemory) FindUser(email string) (model.User, bool) {
@@ -46,8 +47,9 @@ func (i *inMemory) RemoveUser(id model.UserIdentifier) error {
 	return nil
 }
 
-func (i *inMemory) RegisterTokenPair(accessToken string, refreshToken string) error {
+func (i *inMemory) RegisterTokenPair(accessToken string, refreshToken string, uid uint64) error {
 	i.accessToRefresh[accessToken] = refreshToken
+	i.uidToRefresh[uid] = refreshToken
 	return nil
 }
 
@@ -64,6 +66,14 @@ func (i *inMemory) DisableToken(token string) error {
 		return status.Errorf(codes.NotFound, "token not exist: %v", token)
 	}
 	delete(i.accessToRefresh, token)
+	return nil
+}
+
+func (i *inMemory) DisableTokenByUid(uid uint64) error {
+	if _, ok := i.uidToRefresh[uid]; !ok {
+		return status.Errorf(codes.NotFound, "token not found for user: %v", uid)
+	}
+	delete(i.uidToRefresh, uid)
 	return nil
 }
 

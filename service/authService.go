@@ -59,7 +59,7 @@ func (s *server) RegisterUser(ctx context.Context, request *auth.RegisterRequest
 		return nil, err
 	}
 
-	if err = s.tokenStorage.RegisterTokenPair(token.Access, token.Refresh); err != nil {
+	if err = s.tokenStorage.RegisterTokenPair(token.Access, token.Refresh, u.Uid); err != nil {
 		return nil, err
 	}
 
@@ -86,7 +86,14 @@ func (s *server) UnregisterUser(ctx context.Context, request *auth.UnregisterReq
 	return &auth.UnregisterResponse{Success: true}, nil
 }
 
+func (s *server) refreshTokenRotation() (accessToken string, refreshToken string) {
+	return
+}
+
+// Login is request for getting access token and refresh token of user.
+// This function also invalidates previous refresh token and create new token: refresh-token-rotation
 // TODO: Rotate refresh key when re-publish accessKey
+// TODO: Erase previous refresh token linked to User
 func (s *server) Login(ctx context.Context, request *auth.LoginRequest) (*auth.LoginResponse, error) {
 	switch data := request.Method.(type) {
 	case *auth.LoginRequest_Traditional:
@@ -99,13 +106,16 @@ func (s *server) Login(ctx context.Context, request *auth.LoginRequest) (*auth.L
 			return nil, status.Error(codes.PermissionDenied, "incorrect password")
 		}
 
+		if err := s.tokenStorage.DisableTokenByUid(u.Uid); err != nil {
+			return nil, err
+		}
+
 		token, err := s.tokenManager.Generate(u)
 		if err != nil {
 			return nil, err
 		}
 
-		err = s.tokenStorage.RegisterTokenPair(token.Access, token.Refresh)
-		if err != nil {
+		if err = s.tokenStorage.RegisterTokenPair(token.Access, token.Refresh, u.Uid); err != nil {
 			return nil, err
 		}
 
@@ -116,20 +126,10 @@ func (s *server) Login(ctx context.Context, request *auth.LoginRequest) (*auth.L
 	return nil, status.Error(codes.Internal, "could not recognize method for login")
 }
 
+// Logout is request for discarding previous refresh token of user.
 func (s *server) Logout(ctx context.Context, request *auth.LogoutRequest) (*auth.LogoutResponse, error) {
 	token := request.Token
-	meta, err := s.getTokenFromMetadata(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if token != meta {
-		return nil, status.Error(codes.PermissionDenied, "argument and current user are not matching")
-	}
-	refreshToken, err := s.tokenStorage.GetRefreshToken(request.Token)
-	if err != nil {
-		return nil, err
-	}
-	if err = s.tokenStorage.DisableToken(refreshToken); err != nil {
+	if err := s.tokenStorage.DisableToken(token); err != nil {
 		return nil, err
 	}
 	return &auth.LogoutResponse{Token: request.Token}, nil
