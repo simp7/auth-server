@@ -92,8 +92,6 @@ func (s *server) refreshTokenRotation() (accessToken string, refreshToken string
 
 // Login is request for getting access token and refresh token of user.
 // This function also invalidates previous refresh token and create new token: refresh-token-rotation
-// TODO: Rotate refresh key when re-publish accessKey
-// TODO: Erase previous refresh token linked to User
 func (s *server) Login(ctx context.Context, request *auth.LoginRequest) (*auth.LoginResponse, error) {
 	switch data := request.Method.(type) {
 	case *auth.LoginRequest_Traditional:

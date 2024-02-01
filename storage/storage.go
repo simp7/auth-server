@@ -6,6 +6,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// User is storage for user.
 type User interface {
 	FindUser(email string) (model.User, bool)
 	GetUser(id model.UserIdentifier) (model.User, error)
@@ -14,6 +15,7 @@ type User interface {
 	Close() error
 }
 
+// Token is storage for refresh token tied with accessToken and uid.
 type Token interface {
 	RegisterTokenPair(accessToken string, refreshToken string, uid uint64) error
 	DisableToken(refreshToken string) error
