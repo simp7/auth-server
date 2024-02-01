@@ -63,7 +63,7 @@ func (s *server) RegisterUser(ctx context.Context, request *auth.RegisterRequest
 		return nil, err
 	}
 
-	return &auth.RegisterResponse{Token: token.Access}, nil
+	return &auth.RegisterResponse{AccessToken: token.Access}, nil
 }
 
 func (s *server) UnregisterUser(ctx context.Context, request *auth.UnregisterRequest) (*auth.UnregisterResponse, error) {
@@ -119,7 +119,7 @@ func (s *server) Login(ctx context.Context, request *auth.LoginRequest) (*auth.L
 			return nil, err
 		}
 
-		return &auth.LoginResponse{Token: token.Access}, nil
+		return &auth.LoginResponse{AccessToken: token.Access}, nil
 	case *auth.LoginRequest_Oauth:
 		return nil, status.Error(codes.Unimplemented, "oauth is not implemented yet")
 	}
@@ -128,11 +128,11 @@ func (s *server) Login(ctx context.Context, request *auth.LoginRequest) (*auth.L
 
 // Logout is request for discarding previous refresh token of user.
 func (s *server) Logout(ctx context.Context, request *auth.LogoutRequest) (*auth.LogoutResponse, error) {
-	token := request.Token
+	token := request.RefreshToken
 	if err := s.tokenStorage.DisableToken(token); err != nil {
 		return nil, err
 	}
-	return &auth.LogoutResponse{Token: request.Token}, nil
+	return &auth.LogoutResponse{RefreshToken: request.RefreshToken}, nil
 }
 
 func (s *server) mustEmbedUnimplementedAuthServer() {

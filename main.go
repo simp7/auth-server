@@ -21,7 +21,6 @@ const (
 
 func main() {
 	opts := []grpc.ServerOption{}
-
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		log.Fatalf("error when generating random key: %v", err)
