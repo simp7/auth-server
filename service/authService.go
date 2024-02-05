@@ -20,6 +20,8 @@ type server struct {
 	index        uint64
 }
 
+// NewServer returns new AuthServer struct.
+// user storage and token storage can be different: recommended composition is Redis and RDB(SQL Family).
 func NewServer(userStorage storage.User, tokenStorage storage.Token, tokenManager tokenManager.TokenManager) auth.AuthServer {
 	s := new(server)
 	s.userStorage = userStorage
@@ -35,6 +37,8 @@ func (s *server) getIndex() uint64 {
 	return result
 }
 
+// RegisterUser is request for creating new user.
+// This also includes generating-password process.
 func (s *server) RegisterUser(ctx context.Context, request *auth.RegisterRequest) (*auth.RegisterResponse, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -66,6 +70,8 @@ func (s *server) RegisterUser(ctx context.Context, request *auth.RegisterRequest
 	return &auth.RegisterResponse{AccessToken: token.Access}, nil
 }
 
+// UnregisterUser is request for deleting user from db.
+// This function compares token and requested uid, for preventing deleting other.
 func (s *server) UnregisterUser(ctx context.Context, request *auth.UnregisterRequest) (*auth.UnregisterResponse, error) {
 	token, err := s.getTokenFromMetadata(ctx)
 	if err != nil {
