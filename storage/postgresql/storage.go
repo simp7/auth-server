@@ -1,10 +1,10 @@
 package postgresql
 
 import (
-	"auth-server/model"
-	"auth-server/storage"
 	"database/sql"
 	"fmt"
+	"github.com/simp7/auth-server/model"
+	"github.com/simp7/auth-server/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

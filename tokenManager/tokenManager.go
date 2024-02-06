@@ -1,7 +1,7 @@
 package tokenManager
 
 import (
-	"auth-server/model"
+	"github.com/simp7/auth-server/model"
 )
 
 type TokenData struct {

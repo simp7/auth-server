@@ -1,13 +1,13 @@
 package jwtManager
 
 import (
-	"auth-server/model"
-	"auth-server/tokenManager"
 	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/simp7/auth-server/model"
+	"github.com/simp7/auth-server/tokenManager"
 	"time"
 )
 

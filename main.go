@@ -1,13 +1,13 @@
 package main
 
 import (
-	"auth-server/service"
-	"auth-server/storage/inMemory"
-	"auth-server/storage/postgresql"
-	"auth-server/tokenManager/jwtManager"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"github.com/simp7/auth-server/service"
+	"github.com/simp7/auth-server/storage/inMemory"
+	"github.com/simp7/auth-server/storage/postgresql"
+	"github.com/simp7/auth-server/tokenManager/jwtManager"
 	"github.com/simp7/idl/gen/go/auth"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"

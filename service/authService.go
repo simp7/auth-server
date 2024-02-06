@@ -1,10 +1,10 @@
 package service
 
 import (
-	"auth-server/model"
-	"auth-server/storage"
-	"auth-server/tokenManager"
 	"context"
+	"github.com/simp7/auth-server/model"
+	"github.com/simp7/auth-server/storage"
+	"github.com/simp7/auth-server/tokenManager"
 	"github.com/simp7/idl/gen/go/auth"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"

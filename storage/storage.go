@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"auth-server/model"
+	"github.com/simp7/auth-server/model"
 
 	_ "github.com/lib/pq"
 )

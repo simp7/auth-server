@@ -1,8 +1,8 @@
 package inMemory
 
 import (
-	"auth-server/model"
-	"auth-server/storage"
+	"github.com/simp7/auth-server/model"
+	"github.com/simp7/auth-server/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
