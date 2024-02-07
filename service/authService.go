@@ -42,7 +42,7 @@ func (s *server) getIndex() uint64 {
 func (s *server) RegisterUser(ctx context.Context, request *auth.RegisterRequest) (*auth.RegisterResponse, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "error when generate hashed password")
+		return nil, status.Error(codes.Internal, "error when generating hashed password")
 	}
 	u := model.User{
 		UserIdentifier: model.UserIdentifier{
